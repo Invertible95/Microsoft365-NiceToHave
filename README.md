@@ -1,16 +1,56 @@
-# Microsoft365-NiceToHave
+# 🚀 Microsoft365-NiceToHave
 
-tl;dr
-Collection of powershell nice to have scripts focusing on Microsoft Entra and Microsoft 365 related applications,
-For use in your daily management of Microsoft 365 environments and eventually automation and reporting.
+<div align="center">
+    <img src="https://img.shields.io/badge/PowerShell-5391FE?style=for-the-badge&logo=powershell&logoColor=white" />
+    <img src="https://img.shields.io/badge/Microsoft%20365-0078D4?style=for-the-badge&logo=microsoft-office&logoColor=white" />
+    <img src="https://img.shields.io/badge/Microsoft%20Entra-0078D4?style=for-the-badge&logo=microsoft&logoColor=white" />
+</div>
 
-Goal:
-To be a hub for useful everyday scripts.
-If you're looking for an easy create a shared mailbox script, a report of which Microsoft Office license your users are assigned or more deep dives into Entra CA policies; this should be your go to page.
+## 📋 Overview
 
-Why:
-I love powershell, automation and making my MSP life easier using the language I prefer.
-I'm starting this repository in preperation for my further advancement within the Microsoft Cloud sphere.
+> **PowerShell scripts for Microsoft Entra and Microsoft 365** to simplify your daily management tasks.
 
-Any suggestion or feedback is always welcome.
-Contact me on LinkedIn https://www.linkedin.com/in/victor-uhrberg/
+## 🎯 Goal
+
+<div align="center">
+    <h3>🏠 <em>Useful everyday scripts in one place</em></h3>
+</div>
+
+**Find scripts for:**
+- 📧 Shared mailbox creation
+- 📊 License reporting
+- 🔐 Conditional Access management
+- 🛠️ And more!
+
+## 💡 Why This Repository?
+
+<table>
+<tr>
+<td width="33%" align="center">
+    <h4>💙 PowerShell</h4>
+    <p>Making MSP life easier with automation</p>
+</td>
+<td width="33%" align="center">
+    <h4>📈 Growth</h4>
+    <p>Advancing in the Microsoft Cloud space</p>
+</td>
+<td width="33%" align="center">
+    <h4>🤝 Community</h4>
+    <p>Sharing knowledge with others</p>
+</td>
+</tr>
+</table>
+
+## 📞 Contact
+
+<div align="center">
+    
+**Feedback welcome!**
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Connect-0077B5?style=for-the-badge&logo=linkedin&logoColor=white)](https://www.linkedin.com/in/victor-uhrberg/)
+
+</div>
+
+<div align="center">
+    <sub>Built with ❤️ for the Microsoft 365 community</sub>
+</div>
