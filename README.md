@@ -17,7 +17,9 @@
 </div>
 
 **Find scripts for:**
-- 📧 Shared mailbox creation
+- 📧 Exchange Online management
+- 🔧 Microsoft 365 Admin Center tools
+- 🌐 SharePoint and OneDrive management
 - 📊 License reporting
 - 🔐 Conditional Access management
 - 🛠️ And more!
