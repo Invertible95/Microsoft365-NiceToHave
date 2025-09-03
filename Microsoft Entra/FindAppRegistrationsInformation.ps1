@@ -18,7 +18,7 @@
     .\FindAppRegistrationsInformation.ps1 -ExportExcel
 
 .LINK
-    https://github.com/Invertible95/Microsoft365-NiceToHave/tree/main
+    https://github.com/Invertible95/Microsoft365-NiceToHave
 #>
 
 
