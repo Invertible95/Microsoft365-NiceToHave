@@ -40,7 +40,6 @@ param(
 $requiredModules = @(
     "Microsoft.Graph.Authentication",
     "Microsoft.Graph.Applications",
-    "Microsoft.Graph.Users.Actions"
     "ImportExcel"
 )
 
