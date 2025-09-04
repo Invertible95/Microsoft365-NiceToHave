@@ -78,6 +78,7 @@ Write-Host "Found $($Applications.Count) applications." -ForegroundColor Green
 
 $Intel = @()
 $Today = (Get-Date).Date
+$AppsWithSecrets = @()
 
 foreach ($App in $Applications) {
     $AppName = $App.DisplayName
@@ -86,6 +87,10 @@ foreach ($App in $Applications) {
     $AppCredentials = Get-MgApplication -ApplicationId $AppId | Select-Object PasswordCredentials
 
     $Secrets = $AppCredentials.PasswordCredentials
+
+    if ($Secrets.Count -gt 0) {
+        $AppsWithSecrets += $AppName
+    }
 
     foreach ($Secret in $Secrets) {
         $SecretId = $Secret.KeyId
@@ -103,11 +108,14 @@ foreach ($App in $Applications) {
     }
 }
 
+Write-Host "Found $($AppsWithSecrets.Count) applications with secrets present." -ForegroundColor Green
+Start-Sleep 3
+
 if ($ExportExcel) {
     try {
         Write-Host "`nExporting data to Excel file at $OutputFilePath" -ForegroundColor Yellow
 
-        $Intel | Export-Excel -Path $OutputFilePath -AutoSize -FreezeTopRow
+        $Intel | Sort-Object ApplicationName | Export-Excel -Path $OutputFilePath -AutoSize -FreezeTopRow
         Start-Sleep 3
         
         Write-Host "Export completed successfully!" -ForegroundColor Green
@@ -118,7 +126,7 @@ if ($ExportExcel) {
 }
 else {
     Write-Host "`nApp Registrations Credential Information:" -ForegroundColor Cyan
-    $Intel | Sort-Object ApplicationName, CredentialType | Format-Table -AutoSize
+    $Intel | Sort-Object ApplicationName | Format-Table -AutoSize
     # Display expiration warnings after the main output
     Write-Host "`nChecking for secrets expiring within 30 days..." -ForegroundColor Yellow
     $ExpiringSecrets = $Intel | Where-Object { $_.DaysUntilExpiry -le 30 -and $_.DaysUntilExpiry -ge 0 }
