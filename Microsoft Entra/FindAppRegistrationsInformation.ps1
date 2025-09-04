@@ -40,6 +40,7 @@ param(
 $requiredModules = @(
     "Microsoft.Graph.Authentication",
     "Microsoft.Graph.Applications",
+    "Microsoft.Graph.Users.Actions"
     "ImportExcel"
 )
 
@@ -98,25 +99,39 @@ foreach ($App in $Applications) {
             SecretId        = $SecretId
             StartDate       = $StartDate
             EndDate         = $EndDate
+            DaysUntilExpiry = ($EndDate - $Today).Days
         }
     }
 }
 
-
-
-
 if ($ExportExcel) {
-    $Intel | Export-Excel -Path $OutputFilePath -AutoSize -FreezeTopRow
-    Start-Sleep 5
-    Write-Host "Exporting data to Excel file at $OutputFilePath" -ForegroundColor Yellow
+    try {
+        Write-Host "`nExporting data to Excel file at $OutputFilePath" -ForegroundColor Yellow
+
+        $Intel | Export-Excel -Path $OutputFilePath -AutoSize -FreezeTopRow
+        Start-Sleep 3
+        
+        Write-Host "Export completed successfully!" -ForegroundColor Green
+    }
+    catch {
+        Write-Error "Failed to export to Excel: $_"
+    }
 }
 else {
-    Write-Host "App Registrations Information:" -ForegroundColor Cyan
-    $Intel | Format-List
-    if ($EndDate -le $Today.Add(-30)) {
-        Write-Host "Secret $SecretId for application $AppName is expiring soon!" -ForegroundColor Red
+    Write-Host "`nApp Registrations Credential Information:" -ForegroundColor Cyan
+    $Intel | Sort-Object ApplicationName, CredentialType | Format-Table -AutoSize
+    # Display expiration warnings after the main output
+    Write-Host "`nChecking for secrets expiring within 30 days..." -ForegroundColor Yellow
+    $ExpiringSecrets = $Intel | Where-Object { $_.DaysUntilExpiry -le 30 -and $_.DaysUntilExpiry -ge 0 }
+
+    if ($ExpiringSecrets) {
+        Write-Host "`nWARNING: The following secrets are expiring within 30 days:" -ForegroundColor Red
+        foreach ($Secret in $ExpiringSecrets) {
+            Write-Host "  - $($Secret.ApplicationName): Secret expires on $($Secret.EndDate) ($($Secret.DaysUntilExpiry) days)" -ForegroundColor Red
+        }
     }
     else {
-        Write-Host "No secrets are expiring within the next 30 days." -ForegroundColor Green
+        Write-Host "`nGood news! No secrets are expiring within the next 30 days." -ForegroundColor Green
     }
 }
+
