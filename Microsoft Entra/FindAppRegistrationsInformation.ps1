@@ -1,24 +1,72 @@
 <#
-.DESCRIPTION
-    This script retrieves all application registrations from Microsoft Entra ID.
-    and collects information about their client secrets, including expiration dates.
-    The output can be used to monitor secret expiration and manage app credentials.
+.SYNOPSIS
+    Retrieves Microsoft Entra ID application registrations and monitors client secret expiration dates.
 
-    The information can also be exported to an Excel file.
+.DESCRIPTION
+    This script connects to Microsoft Graph API and retrieves all application registrations 
+    from Microsoft Entra ID. It collects comprehensive information about client secrets, 
+    including their creation dates, expiration dates, and calculates days until expiry.
+    
+    The script helps administrators proactively monitor and manage application credentials
+    to prevent service disruptions caused by expired secrets. Results can be displayed
+    in the console or exported to an Excel file for reporting and tracking purposes.
+
+.PARAMETER ExportExcel
+    Switch parameter to export results to an Excel file instead of console output.
+
+.PARAMETER OutputFilePath
+    Specifies the path for Excel export file. Default location is C:\Temp\AppRegistrationsInfo.xlsx
 
 .NOTES
-    Author: Victor Uhrberg
-    Date: 2025-09-03
+    File Name      : FindAppRegistrationsInformation.ps1
+    Author         : Victor Uhrberg
+    Version        : 2.0
+    Date           : 2025-01-03
+    Prerequisite   : Microsoft Graph PowerShell SDK modules:
+                     - Microsoft.Graph.Authentication
+                     - Microsoft.Graph.Applications
+                     - ImportExcel (for Excel export functionality)
+    
+    Required Permissions: Application.Read.All
 
 .EXAMPLE
-    For raw output
     .\FindAppRegistrationsInformation.ps1
+    
+    Displays application registration information in the console, including a summary 
+    of applications with secrets and warnings for secrets expiring within 30 days.
 
-    For Excel export
+.EXAMPLE
     .\FindAppRegistrationsInformation.ps1 -ExportExcel
+    
+    Exports all application registration and secret information to an Excel file 
+    at the default location (C:\Temp\AppRegistrationsInfo.xlsx).
+
+.EXAMPLE
+    .\FindAppRegistrationsInformation.ps1 -ExportExcel -OutputFilePath "C:\Reports\AppSecrets.xlsx"
+    
+    Exports the results to a custom Excel file location for reporting purposes.
+
+.INPUTS
+    None. This script does not accept pipeline input.
+
+.OUTPUTS
+    PSCustomObject with the following properties:
+    - ApplicationName: Display name of the application registration
+    - ApplicationId: Unique identifier of the application
+    - SecretId: Key ID of the client secret
+    - StartDate: When the secret was created
+    - EndDate: When the secret expires
+    - DaysUntilExpiry: Number of days until the secret expires
 
 .LINK
+    GitHub Repository:
     https://github.com/Invertible95/Microsoft365-NiceToHave
+    
+    Microsoft Graph Applications API:
+    https://learn.microsoft.com/en-us/graph/api/resources/application
+    
+    Microsoft Graph PowerShell SDK:
+    https://learn.microsoft.com/en-us/powershell/microsoftgraph/
 #>
 
 
