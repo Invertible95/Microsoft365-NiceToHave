@@ -3,66 +3,37 @@
     Identifies and reports on inactive Microsoft Entra Enterprise Applications.
 
 .DESCRIPTION
-    This script connects to Microsoft Graph API and retrieves all Enterprise Applications
-    in a Microsoft Entra tenant. It then collects information about each application,
-    including when it was last accessed and what delegated permissions it has.
-    
-    The script helps identify potentially unused applications that may pose security risks.
+    Connects to Microsoft Graph API using app registration credentials to retrieve
+    Enterprise Applications and their sign-in activity. Helps identify unused
+    applications that may pose security risks.
 
 .PARAMETER TenantId
-    The Microsoft Entra tenant ID (required)
+    Microsoft Entra tenant ID (required)
 
 .PARAMETER ClientId
-    The application (client) ID for authentication (required)
+    Application (client) ID for authentication (required)
+
+.PARAMETER ClientSecret
+    Client secret (defaults to $env:CLIENT_SECRET_EAPPS)
 
 .PARAMETER OutputFilePath
-    Path for Excel export file (default: C:\Temp\InactiveEnterpriseApps.xlsx)
+    Path for Excel export (default: C:\Temp\Enterprise Application sign-in activity.xlsx)
 
 .PARAMETER ExportExcel
-    Switch to export results to Excel file instead of console output
+    Export results to Excel instead of console output
 
 .NOTES
-    File Name      : Get-InactiveEnterpriseApplications.ps1
     Author         : Victor Uhrberg
     Date           : 2025-10-17
-    Prerequisite   : Requires Powershell 7.x and the following modules:
-                     Microsoft.Graph.Authentication
-                     Microsoft.Graph.Applications
-                     ImportExcel
-                     Microsoft Graph API access with appropriate permissions
-                     This script uses an app registration for authentication.
-                     Environment variable CLIENT_SECRET_EAPPS must be set with the client secret
-    Required Permissions: Application.Read.All, AuditLog.Read.All, Directory.Read.All
+    Prerequisites  : PowerShell 7.x, ImportExcel module
+    Permissions    : Application.Read.All, AuditLog.Read.All, Directory.Read.All
 
 .EXAMPLE
-    # Set environment variable first
-    $env:CLIENT_SECRET_EAPPS = "your-client-secret"
-    
-    # Basic usage with console output
-    .\Get-InactiveEnterpriseApplications.ps1 -TenantId "your-tenant-id" -ClientId "your-client-id"
-
-.EXAMPLE
-    # Export to Excel file
-    .\Get-InactiveEnterpriseApplications.ps1 -TenantId "your-tenant-id" -ClientId "your-client-id" -ExportExcel
-
-.OUTPUTS
-    PSCustomObject with the following properties:
-    - AppName: Display name of the enterprise application
-    - AppId: Application ID
-    - CreatedDate: When the application was created
-    - LastSignInDate: When the application was last accessed
-    - DaysSinceLastSignIn: Number of days since last sign-in or "Never Signed In"
-    - DelegatedPermissions: Comma-separated list of delegated permissions
+    $env:CLIENT_SECRET_EAPPS = "your-secret"
+    .\Get-InactiveEnterpriseApplications.ps1 -TenantId "tenant-id" -ClientId "client-id" -ExportExcel
 
 .LINK
-    GitHub Repository:
     https://github.com/Invertible95/Microsoft365-NiceToHave
-    
-    ServicePrincipal resource:
-    https://learn.microsoft.com/en-us/graph/api/resources/serviceprincipal
-    
-    SignInActivity API:
-    https://learn.microsoft.com/en-us/graph/api/serviceprincipalsigninactivity-get?view=graph-rest-beta&tabs=http
 #>
 
 [CmdletBinding()]
@@ -77,7 +48,7 @@ param (
     [string]$ClientSecret = $env:CLIENT_SECRET_EAPPS,
 
     [Parameter(Mandatory = $false)]
-    [string]$OutputFilePath = "C:\Temp\InactiveEnterpriseApps.xlsx",
+    [string]$OutputFilePath = "C:\Temp\Enterprise Application sign-in activity.xlsx",
 
     [Parameter(Mandatory = $false)]
     [switch]$ExportExcel
@@ -143,9 +114,9 @@ function Get-EnterpriseApps {
         
         # Define the initial URL for fetching Enterprise Apps
         $URLGetApplications = "https://graph.microsoft.com/beta/servicePrincipals?" +
-        "`$top=300&" +
+        "`$top=999&" +
         "`$filter=servicePrincipalType eq 'Application' and (tags/any(tag: tag eq 'WindowsAzureActiveDirectoryIntegratedApp'))&" +
-        "`$select=appid,id,displayName,createdDateTime"
+        "`$select=appid,id,displayName,createdDateTime,signInActivity"
 
         # Initialize an array to store all Enterprise Apps
         $allApplications = @()
@@ -173,27 +144,42 @@ function Get-EnterpriseApps {
         return @()
     }
 }
-
-function Get-SignInActivity {
-    param (
-        [Parameter(Mandatory = $true)]
-        [string]$appId
-    )
-
+function Get-SignInActivityBulk {
+    [CmdletBinding()]
+    param()
+    
     try {
-        $lastSignInUrl = "https://graph.microsoft.com/v1.0/auditLogs/signIns?`$filter=appId eq '$appId'&`$orderby=createdDateTime desc&`$top=1"
-        $lastSignInResponse = Invoke-RestMethod -Method GET -Uri $lastSignInUrl -Headers $global:headers
-
-        $lastSignInDateTime = $null
-        if ($lastSignInResponse.value -and $lastSignInResponse.value.Count -gt 0) {
-            $lastSignInDateTime = $lastSignInResponse.value[0].createdDateTime
+        Write-Host "Retrieving sign-in activity data..." -ForegroundColor Yellow
+        
+        # Use REST API with your existing authentication
+        $signInActivityUrl = "https://graph.microsoft.com/beta/reports/servicePrincipalSignInActivities?`$top=999"
+        
+        $allSignInActivity = @()
+        
+        # Get first page
+        $response = Invoke-RestMethod -Method GET -Uri $signInActivityUrl -Headers $global:headers -ErrorAction Stop
+        $allSignInActivity += $response.value
+        
+        # Handle pagination
+        while ($response.'@odata.nextLink') {
+            $response = Invoke-RestMethod -Method GET -Uri $response.'@odata.nextLink' -Headers $global:headers -ErrorAction Stop
+            $allSignInActivity += $response.value
         }
-
-        return $lastSignInDateTime
+        
+        # Build a hashtable for quick lookups by appId
+        $activityLookup = @{}
+        foreach ($activity in $allSignInActivity) {
+            if ($activity.appId) {
+                $activityLookup[$activity.appId] = $activity
+            }
+        }
+        
+        Write-Host "Found sign-in activity for $($activityLookup.Count) applications" -ForegroundColor Green
+        return $activityLookup
     }
     catch {
-        Write-Verbose "No sign-in data available for app $appId"
-        return $null
+        Write-Warning "Failed to retrieve sign-in activity: $_"
+        return @{}
     }
 }
 
@@ -227,18 +213,35 @@ Connect-toGraph
 $results = @()
 
 $applications = Get-EnterpriseApps
+$signInActivityLookup = Get-SignInActivityBulk
+
+Write-Host "Processing $($applications.Count) applications..." -ForegroundColor Cyan
+$counter = 0
 
 foreach ($app in $applications) {
-    $appId = $app.appid
-    $appName = $app.displayName
-    $appCreatedDate = $app.createdDateTime
+    $counter++
+    $percentComplete = [math]::Round(($counter / $applications.Count) * 100, 1)
+    
+    Write-Progress -Activity "Analyzing Enterprise Applications" `
+        -Status "Processing: $($app.DisplayName) ($counter of $($applications.Count))" `
+        -PercentComplete $percentComplete
 
-    # Get the last sign-in date for the application
-    $lastSignInDateTime = Get-SignInActivity -appId $appId
+    # Look up sign-in activity
+    $lastSignInDateTime = $null
+    if ($signInActivityLookup.ContainsKey($app.AppId)) {
+        $signInActivity = $signInActivityLookup[$app.AppId]
+        
+        # Get the most recent sign-in from various activity types
+        $lastSignInDateTime = $signInActivity.LastSignInActivity.LastSignInDateTime ?? 
+        $signInActivity.DelegatedClientSignInActivity.LastSignInDateTime ??
+        $signInActivity.DelegatedResourceSignInActivity.LastSignInDateTime ??
+        $signInActivity.ApplicationAuthenticationClientSignInActivity.LastSignInDateTime ??
+        $null
+    }
 
-    # Calculate the number of days since the last sign-in
+    # Calculate days since last sign-in
     $daysSinceLastSignIn = if ($lastSignInDateTime) { 
-        (New-TimeSpan -Start (Get-Date $lastSignInDateTime) -End (Get-Date)).Days 
+        [math]::Round((New-TimeSpan -Start $lastSignInDateTime -End (Get-Date)).TotalDays)
     }
     else { 
         "Never Signed In" 
@@ -249,9 +252,9 @@ foreach ($app in $applications) {
 
     # Output the application details
     $Output = [PSCustomObject]@{
-        AppName              = $appName
-        AppId                = $appId
-        CreatedDate          = $appCreatedDate
+        AppName              = $app.DisplayName
+        AppId                = $app.AppId
+        CreatedDate          = $app.CreatedDateTime
         LastSignInDate       = $lastSignInDateTime
         DaysSinceLastSignIn  = $daysSinceLastSignIn
         DelegatedPermissions = $allDelegatedScopes -join ', '
@@ -262,7 +265,7 @@ foreach ($app in $applications) {
 
 # Export results to Excel or display in console
 if ($ExportExcel) {
-    $results | Export-Excel -Path $OutputFilePath -WorksheetName "InactiveEnterpriseApps" -TableStyle Light1 -AutoSize -Title "Inactive Enterprise Applications" -Show
+    $results | Export-Excel -Path $OutputFilePath -WorksheetName "InactiveEnterpriseApps" -TableStyle Light1 -AutoSize -Title "Enterprise Application Sign-In Activity" -Show
 }
 else {
     $results | Format-Table -AutoSize
