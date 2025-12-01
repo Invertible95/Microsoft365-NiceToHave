@@ -265,7 +265,7 @@ foreach ($app in $applications) {
 
 # Export results to Excel or display in console
 if ($ExportExcel) {
-    $results | Export-Excel -Path $OutputFilePath -WorksheetName "InactiveEnterpriseApps" -TableStyle Light1 -AutoSize -Title "Enterprise Application Sign-In Activity" -Show
+    $results | Export-Excel -Path $OutputFilePath -WorksheetName "EnterpriseApplicationSignInActivity" -TableStyle Light1 -AutoSize -Title "Enterprise Application Sign-In Activity" -Show
 }
 else {
     $results | Format-Table -AutoSize
