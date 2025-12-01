@@ -249,7 +249,6 @@ foreach ($app in $applications) {
     # Get delegated permissions
     $allDelegatedScopes = Get-DelegatedPermissions -appId $app.Id
 
-
     # Output the application details
     $Output = [PSCustomObject]@{
         AppName              = $appName
@@ -262,8 +261,13 @@ foreach ($app in $applications) {
 
     $results += $Output
 }
-# Export results to CSV
 
+# Export results to Excel or display in console
 if ($ExportExcel) {
-    $results | Export-Excel -Path $OutputFilePath -AutoSize -WorksheetName "InactiveEnterpriseApps" -TableStyle Light1 -Show
+    $results | Export-Excel -Path $OutputFilePath -WorksheetName "InactiveEnterpriseApps" -TableStyle Light1 -AutoSize -Title "Inactive Enterprise Applications" -Show
+}
+else {
+    $results | Format-Table -AutoSize
+
+    Write-Host "Seeing alot of apps in your console? Use -ExportExcel switch to export results to an Excel file. `nExporting to Excel also shows additional details and is easier to analyze." -ForegroundColor Yellow
 }
