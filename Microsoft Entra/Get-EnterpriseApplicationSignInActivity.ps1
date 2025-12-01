@@ -30,7 +30,7 @@
 
 .EXAMPLE
     $env:CLIENT_SECRET_EAPPS = "your-secret"
-    .\Get-InactiveEnterpriseApplications.ps1 -TenantId "tenant-id" -ClientId "client-id" -ExportExcel
+    .\Get-EnterpriseApplicationSignInActivity.ps1 -TenantId "tenant-id" -ClientId "client-id" -ExportExcel
 
 .LINK
     https://github.com/Invertible95/Microsoft365-NiceToHave
