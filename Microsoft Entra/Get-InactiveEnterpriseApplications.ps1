@@ -114,11 +114,11 @@ function Connect-toGraph {
         $tokenBody = @{
             Grant_Type    = "client_credentials"
             Scope         = "https://graph.microsoft.com/.default"
-            Client_Id     = $ClientId
-            Client_Secret = $clientSecretID
+            Client_Id     = $script:ClientId
+            Client_Secret = $script:ClientSecret
         }
         
-        $global:tokenResponse = Invoke-RestMethod -Uri "https://login.microsoftonline.com/$tenantID/oauth2/v2.0/token" -Method POST -Body $tokenBody -ErrorAction Stop
+        $global:tokenResponse = Invoke-RestMethod -Uri "https://login.microsoftonline.com/$script:TenantId/oauth2/v2.0/token" -Method POST -Body $tokenBody -ErrorAction Stop
         
         $global:headers = @{
             "Authorization" = "Bearer $($global:tokenResponse.access_token)"
@@ -126,7 +126,7 @@ function Connect-toGraph {
         }
         
         Write-Host "Successfully connected to Microsoft Graph" -ForegroundColor Green
-        Show-RestApiConnectionStatus -TenantId $tenantID -ClientId $clientID
+        Show-RestApiConnectionStatus -TenantId $script:TenantId -ClientId $script:ClientId
     }
     catch {
         Write-Error "Failed to connect to Microsoft Graph: $_"
