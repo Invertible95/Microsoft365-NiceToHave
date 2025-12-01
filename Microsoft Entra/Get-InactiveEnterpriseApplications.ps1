@@ -181,27 +181,20 @@ function Get-SignInActivity {
     )
 
     try {
-        # Get the last sign-in date for the application
-        $lastSignInUrl = "https://graph.microsoft.com/beta/reports/servicePrincipalSignInActivities?`$filter=appId eq '$($appId)'"
-        $lastSignInResponse = Invoke-RestMethod -Method GET -Uri $lastSignInUrl -Headers $headers
+        $lastSignInUrl = "https://graph.microsoft.com/v1.0/auditLogs/signIns?`$filter=appId eq '$appId'&`$orderby=createdDateTime desc&`$top=1"
+        $lastSignInResponse = Invoke-RestMethod -Method GET -Uri $lastSignInUrl -Headers $global:headers
 
-        # Extract the actual date from the response properly
-        # Reason: beta/reports/servicePrincipalSignInActivities is a new API endpoint and returns an array of sign-in activities
         $lastSignInDateTime = $null
         if ($lastSignInResponse.value -and $lastSignInResponse.value.Count -gt 0) {
-            $signInActivity = $lastSignInResponse.value[0].lastSignInActivity
-            if ($signInActivity -and $signInActivity.lastSignInDateTime) {
-                $lastSignInDateTime = $signInActivity.lastSignInDateTime
-            }
+            $lastSignInDateTime = $lastSignInResponse.value[0].createdDateTime
         }
+
+        return $lastSignInDateTime
     }
     catch {
-        # Some apps may not have sign-in logs available
-        Write-Verbose "No sign-in data available for app $AppId"
+        Write-Verbose "No sign-in data available for app $appId"
         return $null
     }
-
-    return $lastSignInDateTime
 }
 
 function Get-DelegatedPermissions {
@@ -209,19 +202,24 @@ function Get-DelegatedPermissions {
         [Parameter(Mandatory = $true)]
         [string]$appId
     )
-    $delegatedPermissionsUrl = "https://graph.microsoft.com/beta/servicePrincipals/$($appId)/oauth2PermissionGrants"
-    $delegatedPermissions = Invoke-RestMethod -Method GET -Uri $delegatedPermissionsUrl -Headers $headers
     
-    # Collect ALL scopes from ALL permission grants
-    $allDelegatedScopes = @()
-    foreach ($grant in $delegatedPermissions.value) {
-        if ($grant.scope) {
-            # Split the scope string and add individual permissions
-            $scopeArray = $grant.scope.Trim().Split(' ', [System.StringSplitOptions]::RemoveEmptyEntries)
-            $allDelegatedScopes += $scopeArray
+    try {
+        $delegatedPermissionsUrl = "https://graph.Microsoft.com/v1.0/servicePrincipals/$appId/oauth2PermissionGrants"
+        $delegatedPermissions = Invoke-RestMethod -Method GET -Uri $delegatedPermissionsUrl -Headers $global:headers 
+        
+        $allDelegatedScopes = @()
+        foreach ($grant in $delegatedPermissions.value) {
+            if ($grant.scope) {
+                $scopeArray = $grant.scope.Trim().Split(' ', [System.StringSplitOptions]::RemoveEmptyEntries)
+                $allDelegatedScopes += $scopeArray
+            }
         }
+        return $allDelegatedScopes
     }
-    return $allDelegatedScopes
+    catch {
+        Write-Warning "Failed to get permissions for app $appId':' $_"
+        return @()
+    }
 }
 
 Connect-toGraph
