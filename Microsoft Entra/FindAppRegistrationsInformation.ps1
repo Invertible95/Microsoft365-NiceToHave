@@ -126,44 +126,75 @@ Write-Host "Found $($Applications.Count) applications." -ForegroundColor Green
 
 $Intel = @()
 $Today = (Get-Date).Date
-$AppsWithSecrets = @()
+$AppsWithCredentials = @()
 
 foreach ($App in $Applications) {
     $AppName = $App.DisplayName
     $AppId = $App.Id
 
-    $AppCredentials = Get-MgApplication -ApplicationId $AppId | Select-Object PasswordCredentials
+    $AppCredentials = Get-MgApplication -ApplicationId $AppId | Select-Object PasswordCredentials, KeyCredentials
 
     $Secrets = $AppCredentials.PasswordCredentials
+    $Certs = $AppCredentials.KeyCredentials
 
     if ($Secrets.Count -gt 0) {
-        $AppsWithSecrets += $AppName
+        $AppsWithCredentials += $AppName
     }
+    if ($Certs.Count -gt 0) {
+        $AppsWithCredentials += $AppName
+    }
+
 
     foreach ($Secret in $Secrets) {
-        $SecretId = $Secret.KeyId
         $StartDate = $Secret.StartDateTime
         $EndDate = $Secret.EndDateTime
+        $SecretName = $Secret.DisplayName
 
         $Intel += [PSCustomObject]@{
-            ApplicationName = $AppName
-            ApplicationId   = $AppId
-            SecretId        = $SecretId
-            StartDate       = $StartDate
-            EndDate         = $EndDate
-            DaysUntilExpiry = ($EndDate - $Today).Days
+            ApplicationName                 = $AppName
+            ApplicationId                   = $AppId
+            'Secret Name'                   = $SecretName
+            'Secret Start Date'             = $StartDate
+            'Secret End Date'               = $EndDate
+            'Secret Days Until Expiry'      = ($EndDate - $Today).Days
+            'Certificate Name'              = $Null
+            'Certificate Start Date'        = $Null
+            'Certificate End Date'          = $Null
+            'Certificate Days Until Expiry' = $Null
         }
     }
+
+    foreach ($Cert in $Certs) {
+        $StartDate = $Cert.StartDateTime
+        $EndDate = $Cert.EndDateTime
+        $CertName = $Cert.DisplayName
+
+        $Intel += [PSCustomObject]@{
+            ApplicationName                 = $AppName
+            ApplicationId                   = $AppId
+            'Secret Name'                   = $Null
+            'Secret Start Date'             = $Null
+            'Secret End Date'               = $Null
+            'Secret Days Until Expiry'      = $Null
+            'Certificate Name'              = $CertName
+            'Certificate Start Date'        = $StartDate
+            'Certificate End Date'          = $EndDate
+            'Certificate Days Until Expiry' = ($EndDate - $Today).Days
+        }
+    }
+
 }
 
-Write-Host "Found $($AppsWithSecrets.Count) applications with secrets present." -ForegroundColor Green
-Start-Sleep 3
+
+
+Write-Host "Found $($AppsWithCredentials.Count) applications with credentials present." -ForegroundColor Green
+Start-Sleep 2
 
 if ($ExportExcel) {
     try {
         Write-Host "`nExporting data to Excel file at $OutputFilePath" -ForegroundColor Yellow
 
-        $Intel | Sort-Object ApplicationName | Export-Excel -Path $OutputFilePath -AutoSize -FreezeTopRow
+        $Intel | Sort-Object ApplicationName | Export-Excel -Path $OutputFilePath -AutoSize -FreezeTopRow -TableStyle Light13 -Title "App Registrations Credential Information" -Show
         Start-Sleep 3
         
         Write-Host "Export completed successfully!" -ForegroundColor Green
@@ -175,18 +206,24 @@ if ($ExportExcel) {
 else {
     Write-Host "`nApp Registrations Credential Information:" -ForegroundColor Cyan
     $Intel | Sort-Object ApplicationName | Format-Table -AutoSize
-    # Display expiration warnings after the main output
-    Write-Host "`nChecking for secrets expiring within 30 days..." -ForegroundColor Yellow
-    $ExpiringSecrets = $Intel | Where-Object { $_.DaysUntilExpiry -le 30 -and $_.DaysUntilExpiry -ge 0 }
+    
+    # Display expiration warnings for both secrets and certificates
+    Write-Host "`nChecking for credentials expiring within 30 days..." -ForegroundColor Yellow
+    $ExpiringCredentials = $Intel | Where-Object { $_.DaysUntilExpiry -le 30 -and $_.DaysUntilExpiry -ge 0 }
 
-    if ($ExpiringSecrets) {
-        Write-Host "`nWARNING: The following secrets are expiring within 30 days:" -ForegroundColor Red
-        foreach ($Secret in $ExpiringSecrets) {
-            Write-Host "  - $($Secret.ApplicationName): Secret expires on $($Secret.EndDate) ($($Secret.DaysUntilExpiry) days)" -ForegroundColor Red
+    if ($ExpiringCredentials) {
+        Write-Host "`nWARNING: The following credentials are expiring within 30 days:" -ForegroundColor Red
+        foreach ($Credential in $ExpiringCredentials) {
+            if ($Credential.'Secret Name') {
+                Write-Host "  - $($Credential.ApplicationName): Secret '$($Credential.'Secret Name')' expires on $($Credential.'Secret End Date') ($($Credential.DaysUntilExpiry) days)" -ForegroundColor Red
+            }
+            elseif ($Credential.'Certificate Name') {
+                Write-Host "  - $($Credential.ApplicationName): Certificate '$($Credential.'Certificate Name')' expires on $($Credential.'Certificate End Date') ($($Credential.DaysUntilExpiry) days)" -ForegroundColor Red
+            }
         }
     }
     else {
-        Write-Host "`nGood news! No secrets are expiring within the next 30 days." -ForegroundColor Green
+        Write-Host "`nGood news! No secrets or certificates are expiring within the next 30 days." -ForegroundColor Green
     }
 }
 
